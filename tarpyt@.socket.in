@@ -1,0 +1,9 @@
+[Unit]
+Description=An @PROTOCOL@ tarpit on port %i
+After=network.target
+
+[Socket]
+ListenStream=%i
+
+[Install]
+WantedBy=sockets.target

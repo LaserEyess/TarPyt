@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""
+TarPyt: A multi-protocol tarpit.
+
+TarPyt works by manipulating flexibility in certain protocols to stall and delay a client trying
+to connect. The main purpose of this is to frustrate hostile actors (e.g. ssh bruteforce) and
+tie up their resources. In the ideal case, they blacklist your server for future attacks, but more
+likely what will happen is that you'll waste their time and money. It's about the small wins.
+"""
+
+from argparse import ArgumentParser
+import asyncio
+import ctypes
+import enum
+import logging
+import os
+import random
+from socket import socket, AF_UNSPEC
+import string
+import sys
+import typing as T
+
+log = logging.getLogger('TarPyt')
+
+# see `man 3 sd_listen_fds`, this is a #define in libsystemd
+SD_LISTEN_FDS_START = 3
+sd_lib = ctypes.CDLL('libsystemd.so')
+
+class Protocol(enum.StrEnum):
+    """Currently supported Protocols"""
+    HTTP = enum.auto()
+    SSH = enum.auto()
+    SMTP = enum.auto()
+
+class Handler():
+    """
+    Generic base class to handle connections. Subclasses must implement get_msg and optionally
+    get_msg_prefix, if appropriate for the protocol
+    """
+    __slot__ = ()
+
+    async def timeout(self: T.Self) -> None:
+        """Sleep for a random amount of time between 3 and 10 s"""
+        await asyncio.sleep(random.randint(3, 10))
+
+    def get_msg_prefix(self: T.Self) -> bytes:
+        """Optional prefix if required by the protocol, to be sent before the main loop."""
+        return b''
+
+    def get_msg(self: T.Self) -> bytes:
+        """Main message that will be send during the while loop"""
+        return b''
+
+    async def write(self: T.Self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        """
+        Write nonsense to a socket to conform with a particular message format. Each loop iteration
+        will send a random formatted string, then wait some time before doing it again
+
+        Parameters
+        ----------
+        reader : asyncio.StreamReader
+            StreamReader from asyncio.start_server(), unused.
+        writer : asyncio.StreamWriter
+            StreamWriter from asyncio.start_server()
+
+        """
+        log.debug("New Connection")
+        try:
+            # some protocols (HTTP) require an initial string before the tarpit can begin
+            if len(prefix := self.get_msg_prefix()) > 0:
+                writer.write(prefix)
+            while True:
+                await self.timeout()
+                writer.write(self.get_msg())
+                await writer.drain()
+
+        except ConnectionResetError:
+            log.debug("Connection closed")
+
+class SSHHandler(Handler):
+    """Handler class for ssh connections"""
+    __slots__ = ()
+
+    def get_msg(self: T.Self) -> bytes:
+        """
+        RFC 4253:
+            The server MAY send other lines of data before sending the version
+            string.  Each line SHOULD be terminated by a Carriage Return and Line
+            Feed.  Such lines MUST NOT begin with "SSH-", and SHOULD be encoded
+            in ISO-10646 UTF-8 [RFC3629] (language is not specified).
+
+        So, we are allowed to send random bytes that may or may not decode to UTF-8, with
+        a carriage return and a new line at the end. It can't have "SSH-" at the beginning
+        but we're sending only one byte
+        """
+        return random.randbytes(1) + b'\r\n'
+
+class HTTPHandler(Handler):
+    """Handler class for HTTPS connections"""
+    __slots__ = ()
+
+    def get_msg_prefix(self: T.Self) -> bytes:
+        """
+        Returns required HTTP version bytes string
+        """
+        return 'HTTP/1.1 200 OK\r\n'.encode('latin-1')
+
+    def get_msg(self: T.Self) -> bytes:
+        """
+        RFC 2616:
+            Request (section 5) and Response (section 6) messages use the generic
+            message format of RFC 822 [9] for transferring entities (the payload
+            of the message). Both types of message consist of a start-line, zero
+            or more header fields (also known as "headers"), an empty line (i.e.,
+            a line with nothing preceding the CRLF) indicating the end of the
+            header fields, and possibly a message-body.
+
+        There is no limit defined for the amount of headers that can be send, so we can just do
+        whatever we want here. HTTP is also latin-1 encoded, no source for that.
+        """
+        (header, value) = random.choices(string.ascii_letters, k=2)
+        return f'X-{header}: {value}\r\n'.encode('latin-1')
+
+class SMTPHandler(Handler):
+    """Handler class for SMTP connections"""
+    __slots__ = ()
+
+    def get_msg(self: T.Self) -> bytes:
+        """
+        RFC 5321:
+            The format for multiline replies requires that every line, except the
+            last, begin with the reply code, followed immediately by a hyphen,
+            "-" (also known as minus), followed by text.  The last line will
+            begin with the reply code, followed immediately by <SP>, optionally
+            some text, and <CRLF>.  As noted above, servers SHOULD send the <SP>
+            if subsequent text is not sent, but clients MUST be prepared for it
+            to be omitted.
+
+        220 is the server HELO code, so a client has to wait for it to be over to know what to
+        do, therefore we can just continually send a "220-" prefixed message
+        """
+        return b'220-' + random.randbytes(1) + b'\r\n'
+
+def get_sd_socket() -> socket:
+    """
+    Retrieve the socket from systemd and convert it to a Python socket for use in asyncio. Checks
+    are in place to make sure the socket is valid.
+
+    Raises
+    ------
+    ConnectionError
+        When the socket cannot be acquired.
+
+    Returns
+    -------
+    sock
+        Listening socket for the service.
+
+    """
+    listen_fds: int = sd_lib.sd_listen_fds(0)
+
+    if listen_fds <= 0:
+        raise ConnectionError("Bad fd from systemd")
+
+    sockfd = SD_LISTEN_FDS_START
+
+    if sd_lib.sd_is_socket_inet(sockfd, AF_UNSPEC, 0, ctypes.c_uint16(0)) != 0:
+        raise ConnectionError("Not an inet socket")
+
+    return socket(fileno=sockfd)
+
+def sd_notify(status: dict[str, int | str]):
+    """
+    Use sd-notify to inform systemd we're ready
+    """
+    state_str = '\n'.join([f'{k:s}:{str(v):s}' for k,v in status.items()]).encode('utf-8')
+    state = ctypes.create_string_buffer(state_str, len(state_str) + 1)
+    sd_lib.sd_notify(0, state)
+
+async def main() -> None:
+    """
+    Main run function for TarPyt. Should only be called by systemd, arguments can be added by
+    environment or CLI
+    """
+    parser = ArgumentParser(prog=__file__,
+                            description=__doc__)
+    
+    parser.add_argument("--protocol", help="The protocol to use as the tarpit (lowercase)",
+                        type=Protocol, choices=("http", "ssh", "smtp"), dest="protocol",
+                        required=True)
+
+    parser.add_argument("--log-level", help="log level to use (standard python logging module levels)",
+                        type=str, choices=("DEBUG", "INFO", "WARNING", "ERROR", "FATAL"),
+                        default="WARNING")
+
+    args = parser.parse_args()
+
+    log.setLevel(args.log_level)
+    log.debug("Setting loglevel to %s", args.log_level)
+
+    try:
+        sock = get_sd_socket()
+        log.debug("Successfully got socket from systemd")
+    except ConnectionError as e:
+        log.fatal("Error getting socket: %s", str(e))
+        exit(1)
+
+    log.debug("Setting protocol to %s", args.protocol)
+    handler: Handler
+    match args.protocol:
+        case Protocol.HTTP:
+            handler = HTTPHandler()
+
+        case Protocol.SMTP:
+            handler = SMTPHandler()
+
+        case Protocol.SSH:
+            handler = SSHHandler()
+        
+        case _:
+            log.fatal("No such protocol '%s'", args.protocol)
+            exit(1)
+
+    server = await asyncio.start_server(handler.write, sock=sock)
+    async with server:
+        sd_notify({"READY": 1, "STATUS": f"Listening for {args.protocol:s} connections"})
+        log.info("Server is now accepting connections")
+
+        try:
+            await server.serve_forever()
+        except (asyncio.exceptions.CancelledError, RuntimeError):
+            pass
+
+        log.info("Server is shutting down")
+        sd_notify({"STOPPING": 1})
+
+if __name__ == '__main__':
+    asyncio.run(main())

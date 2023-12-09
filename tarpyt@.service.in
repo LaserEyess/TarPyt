@@ -1,0 +1,52 @@
+[Unit]
+Description = An @PROTOCOL@ tarpit on port %i
+Requires=tarpyt-@PROTOCOL@@%i.socket
+
+[Service]
+Type=nofify
+ExecStart = @bindir@/tarpyt --protocol @PROTOCOL@ --log-level INFO
+NoNewPrivileges=yes
+
+# Low CPU priority/resources
+Nice=19
+CPUWeight=idle
+CPUQuota=10%
+CPUSchedulingPolicy=idle
+
+# Bound memory to prevent DDOS
+# (10 MiB should be enough for anyone)
+MemoryHigh=10M
+ManagedOOMMemoryPressure=kill
+
+# Keep track of number of bytes used
+IPAccounting=yes
+
+# Run as a random user in a user namespace
+PrivateUsers=yes
+DynamicUser=yes
+
+# Sandboxing
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+PrivateIPC=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectKernelLogs=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamiles=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+KeyringMode=private
+MemoryDenyReadWrite=yes
+PrivateMounts=yes
+SystemCallFilter=@system-service
+SystemCallArchitecture=native
+DevicePolicy=closed
