@@ -173,7 +173,7 @@ def sd_notify(status: dict[str, int | str]):
     """
     Use sd-notify to inform systemd we're ready
     """
-    state_str = '\n'.join([f'{k:s}:{str(v):s}' for k,v in status.items()]).encode('utf-8')
+    state_str = '\n'.join([f'{k:s}={str(v):s}' for k,v in status.items()]).encode('utf-8')
     state = ctypes.create_string_buffer(state_str, len(state_str) + 1)
     sd_lib.sd_notify(0, state)
 
