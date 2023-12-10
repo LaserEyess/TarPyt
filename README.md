@@ -78,4 +78,5 @@ Because systemd is handling the socket, there is very little to configure at thi
 specific timeouts could be configured per connection type and per port.
 
 ## License
-TarPyt is licensed under the terms of the GNU Public License v3 (or Later) (GPLv3+).
+TarPyt is licensed under the terms of the GNU Public License v3 (or Later) (GPLv3+). See
+[LICENSE](./LICENSE) for more information.
