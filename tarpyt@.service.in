@@ -3,7 +3,7 @@ Description = An @PROTOCOL@ tarpit on port %i
 Requires=tarpyt-@PROTOCOL@@%i.socket
 
 [Service]
-Type=nofify
+Type=notify
 ExecStart = @bindir@/tarpyt --protocol @PROTOCOL@ --log-level INFO
 NoNewPrivileges=yes
 
@@ -39,14 +39,14 @@ ProtectKernelLogs=yes
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
-RestrictAddressFamiles=AF_UNIX
+RestrictAddressFamilies=AF_UNIX
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
 LockPersonality=yes
 KeyringMode=private
-MemoryDenyReadWrite=yes
+MemoryDenyWriteExecute=yes
 PrivateMounts=yes
 SystemCallFilter=@system-service
-SystemCallArchitecture=native
+SystemCallArchitectures=native
 DevicePolicy=closed
