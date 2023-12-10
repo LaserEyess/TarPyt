@@ -1,10 +1,10 @@
 [Unit]
-Description = An @PROTOCOL@ tarpit on port %i
+Description=An @PROTOCOL@ tarpit on port %i
 Requires=tarpyt-@PROTOCOL@@%i.socket
 
 [Service]
 Type=notify
-ExecStart = @bindir@/tarpyt --protocol @PROTOCOL@ --log-level INFO
+ExecStart=@bindir@/tarpyt --protocol @PROTOCOL@ --log-level INFO
 NoNewPrivileges=yes
 
 # Low CPU priority/resources
@@ -18,9 +18,6 @@ CPUSchedulingPolicy=idle
 MemoryHigh=20M
 ManagedOOMMemoryPressure=kill
 
-# Keep track of number of bytes used
-IPAccounting=yes
-
 # Run as a random user in a user namespace
 PrivateUsers=yes
 DynamicUser=yes
@@ -30,6 +27,7 @@ CapabilityBoundingSet=
 ProtectSystem=strict
 ProtectHome=yes
 PrivateDevices=yes
+ProtectProc=yes
 PrivateTmp=yes
 PrivateNetwork=yes
 PrivateIPC=yes
@@ -39,7 +37,7 @@ ProtectKernelLogs=yes
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
-RestrictAddressFamilies=AF_UNIX
+RestrictAddressFamilies=
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
@@ -47,6 +45,9 @@ LockPersonality=yes
 KeyringMode=private
 MemoryDenyWriteExecute=yes
 PrivateMounts=yes
-SystemCallFilter=@system-service
+SystemCallFilter=@system-service ~@privileged
 SystemCallArchitectures=native
 DevicePolicy=closed
+IPAddressDeny=any
+ReadOnlyPaths=/
+InaccessiblePaths=/etc /var
