@@ -37,7 +37,7 @@ class Handler():
     Generic base class to handle connections. Subclasses must implement get_msg and optionally
     get_msg_prefix, if appropriate for the protocol
     """
-    __slot__ = ()
+    __slots__ = ()
 
     async def timeout(self: T.Self) -> None:
         """Sleep for a random amount of time between 3 and 10 s"""
