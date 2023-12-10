@@ -141,6 +141,13 @@ class SMTPHandler(Handler):
         """
         return b'220-' + random.randbytes(1) + b'\r\n'
 
+def setup_logging(log_level: str) -> None:
+    """Initialize a stdout logger"""
+    # TODO: formatting and the like, especially for journald usage
+    log.addHandler(logging.StreamHandler(sys.stdout))
+    log.setLevel(log_level)
+    log.debug('Setting log Level to %s', log_level)
+
 def get_sd_socket() -> socket:
     """
     Retrieve the socket from systemd and convert it to a Python socket for use in asyncio. Checks
@@ -190,19 +197,18 @@ async def main() -> None:
                         required=True)
 
     parser.add_argument("--log-level", help="log level to use (standard python logging module levels)",
-                        type=str, choices=("DEBUG", "INFO", "WARNING", "ERROR", "FATAL"),
+                        type=str, choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
                         default="WARNING")
 
     args = parser.parse_args()
 
-    log.setLevel(args.log_level)
-    log.debug("Setting loglevel to %s", args.log_level)
+    setup_logging(args.log_level)
 
     try:
         sock = get_sd_socket()
         log.debug("Successfully got socket from systemd")
     except ConnectionError as e:
-        log.fatal("Error getting socket: %s", str(e))
+        log.critical("Error getting socket: %s", str(e))
         exit(1)
 
     log.debug("Setting protocol to %s", args.protocol)
@@ -218,7 +224,7 @@ async def main() -> None:
             handler = SSHHandler()
         
         case _:
-            log.fatal("No such protocol '%s'", args.protocol)
+            log.critical("No such protocol '%s'", args.protocol)
             exit(1)
 
     server = await asyncio.start_server(handler.write, sock=sock)
