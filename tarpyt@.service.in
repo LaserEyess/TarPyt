@@ -14,8 +14,8 @@ CPUQuota=10%
 CPUSchedulingPolicy=idle
 
 # Bound memory to prevent DDOS
-# (10 MiB should be enough for anyone)
-MemoryHigh=10M
+# (20 MiB should be enough for anyone)
+MemoryHigh=20M
 ManagedOOMMemoryPressure=kill
 
 # Keep track of number of bytes used
