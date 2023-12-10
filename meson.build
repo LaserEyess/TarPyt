@@ -23,4 +23,4 @@ foreach protocol: ['ssh', 'http', 'smtp']
     install_dir: systemd_install_dir)
 endforeach
 
-install_data('tarpyt', install_dir: get_option('bindir'), install_mode: 'rwxr--r--')
+install_data('tarpyt', install_dir: get_option('bindir'), install_mode: 'rwxr-xr-x')
