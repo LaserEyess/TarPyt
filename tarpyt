@@ -13,7 +13,6 @@ import asyncio
 import ctypes
 import enum
 import logging
-import os
 import random
 from socket import socket, AF_UNSPEC
 import string
@@ -51,7 +50,8 @@ class Handler():
         """Main message that will be send during the while loop"""
         return b''
 
-    async def write(self: T.Self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def write(self: T.Self,
+                    reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         """
         Write nonsense to a socket to conform with a particular message format. Each loop iteration
         will send a random formatted string, then wait some time before doing it again
@@ -64,6 +64,7 @@ class Handler():
             StreamWriter from asyncio.start_server()
 
         """
+        _ = reader # unused argument
         log.debug("New Connection")
         try:
             # some protocols (HTTP) require an initial string before the tarpit can begin
@@ -189,14 +190,14 @@ async def main() -> None:
     Main run function for TarPyt. Should only be called by systemd, arguments can be added by
     environment or CLI
     """
-    parser = ArgumentParser(prog=__file__,
-                            description=__doc__)
-    
+    parser = ArgumentParser(prog=__file__, description=__doc__)
+
     parser.add_argument("--protocol", help="The protocol to use as the tarpit (lowercase)",
                         type=Protocol, choices=("http", "ssh", "smtp"), dest="protocol",
                         required=True)
 
-    parser.add_argument("--log-level", help="log level to use (standard python logging module levels)",
+    parser.add_argument("--log-level",
+                        help="log level to use (standard python logging module levels)",
                         type=str, choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
                         default="WARNING")
 
@@ -209,7 +210,7 @@ async def main() -> None:
         log.debug("Successfully got socket from systemd")
     except ConnectionError as e:
         log.critical("Error getting socket: %s", str(e))
-        exit(1)
+        sys.exit(1)
 
     log.debug("Setting protocol to %s", args.protocol)
     handler: Handler
@@ -222,10 +223,10 @@ async def main() -> None:
 
         case Protocol.SSH:
             handler = SSHHandler()
-        
+
         case _:
             log.critical("No such protocol '%s'", args.protocol)
-            exit(1)
+            sys.exit(1)
 
     server = await asyncio.start_server(handler.write, sock=sock)
     async with server:
