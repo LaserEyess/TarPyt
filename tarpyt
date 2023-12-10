@@ -179,16 +179,15 @@ def get_sd_socket() -> socket:
 
     """
     listen_fds: int = sd_lib.sd_listen_fds(0)
-
     if listen_fds <= 0:
         raise ConnectionError("Bad fd from systemd")
 
-    sockfd = SD_LISTEN_FDS_START
-
-    if sd_lib.sd_is_socket_inet(sockfd, AF_UNSPEC, 0, ctypes.c_uint16(0)) != 0:
+    ret: int = sd_lib.sd_is_socket_inet(SD_LISTEN_FDS_START, AF_UNSPEC, 0, ctypes.c_uint16(0))
+    if ret != 0:
         raise ConnectionError("Not an inet socket")
 
-    return socket(fileno=sockfd)
+    # We always use the first socket
+    return socket(fileno=SD_LISTEN_FDS_START)
 
 def sd_notify(status: dict[str, int | str]) -> None:
     """
