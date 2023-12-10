@@ -176,7 +176,7 @@ def get_sd_socket() -> socket:
 
     return socket(fileno=sockfd)
 
-def sd_notify(status: dict[str, int | str]):
+def sd_notify(status: dict[str, int | str]) -> None:
     """
     Use sd-notify to inform systemd we're ready
     """
