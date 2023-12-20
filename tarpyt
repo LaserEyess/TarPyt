@@ -21,7 +21,7 @@ tie up their resources. In the ideal case, they blacklist your server for future
 likely what will happen is that you'll waste their time and money. It's about the small wins.
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import asyncio
 import ctypes
 import enum
@@ -197,10 +197,9 @@ def sd_notify(status: dict[str, int | str]) -> None:
     state = ctypes.create_string_buffer(state_str, len(state_str) + 1)
     sd_lib.sd_notify(0, state)
 
-async def main() -> None:
+def parse_arguments() -> Namespace:
     """
-    Main run function for TarPyt. Should only be called by systemd, arguments can be added by
-    environment or CLI
+    Parse arguments
     """
     parser = ArgumentParser(prog=__file__, description=__doc__)
 
@@ -213,8 +212,14 @@ async def main() -> None:
                         type=str, choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
                         default="WARNING")
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
+async def main() -> None:
+    """
+    Main run function for TarPyt. Should only be called by systemd, or if testing by
+    systemd-socket-activate.
+    """
+    args = parse_arguments()
     setup_logging(args.log_level)
 
     try:
