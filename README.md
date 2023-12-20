@@ -1,7 +1,8 @@
 # TarPyt: a Python ssh/http/smtp/etc. tarpit
 
 TarPyt takes its inspiration from [Endlessh: an SSH Tarpit](https://nullprogram.com/blog/2019/03/22/).
-Specifically, the very last section about using [Python's asynio libtrary](https://docs.python.org/3/library/asyncio.html).
+Specifically, the very last section about using
+[Python's asyncio libtrary](https://docs.python.org/3/library/asyncio.html).
 There are two projects I can see like this one:
 
  - [endlessh](https://github.com/skeeto/endlessh)
