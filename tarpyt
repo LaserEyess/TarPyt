@@ -52,7 +52,10 @@ class Handler():
     Generic base class to handle connections. Subclasses must implement get_msg and optionally
     get_msg_prefix, if appropriate for the protocol
     """
-    __slots__ = ()
+    __slots__ = ("counter",)
+
+    def __init__(self: T.Self) -> None:
+        self.counter: int = 0
 
     async def timeout(self: T.Self) -> None:
         """Sleep for a random amount of time between 3 and 10 s"""
@@ -81,8 +84,16 @@ class Handler():
 
         """
         _ = reader # unused argument
-        log.debug("New Connection")
+        host = writer.get_extra_info("peername", default=None)
+        if host is None:
+            raise ValueError("what the fuck?")
+
+        hostname = host[0]
+
         try:
+            self.counter += 1
+            log.info("New Connection from %s (%d total)", hostname, self.counter)
+
             # some protocols (HTTP) require an initial string before the tarpit can begin
             if len(prefix := self.get_msg_prefix()) > 0:
                 writer.write(prefix)
@@ -91,8 +102,9 @@ class Handler():
                 writer.write(self.get_msg())
                 await writer.drain()
 
-        except ConnectionResetError:
-            log.debug("Connection closed")
+        except (ConnectionResetError, TimeoutError):
+            self.counter -= 1
+            log.info("Connection closed with remote host %s (%d total)", hostname, self.counter)
 
 class SSHHandler(Handler):
     """Handler class for ssh connections"""
