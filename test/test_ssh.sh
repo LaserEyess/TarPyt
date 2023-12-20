@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 port=10022
-systemd-socket-activate -l $port ./tarpyt --protocol ssh --log-level DEBUG &
-trap "kill -SIGINT $!" SIGINT
+systemd-socket-activate -l $port ./tarpyt --protocol ssh --log-level DEBUG --log-to-stdout &
+trap "kill -SIGTERM $!" SIGINT EXIT
 
 timeout -s SIGINT 20 ssh -v localhost -p $port
 
