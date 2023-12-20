@@ -26,12 +26,15 @@ import asyncio
 import ctypes
 import enum
 import logging
+from logging.handlers import SysLogHandler
 import random
 from socket import socket, AF_UNSPEC
 import string
 import sys
 import typing as T
 
+
+# Logging setup
 log = logging.getLogger('TarPyt')
 
 # see `man 3 sd_listen_fds`, this is a #define in libsystemd
@@ -155,12 +158,16 @@ class SMTPHandler(Handler):
         """
         return b'220-' + random.randbytes(1) + b'\r\n'
 
-def setup_logging(log_level: str) -> None:
-    """Initialize a stdout logger"""
-    # TODO: formatting and the like, especially for journald usage
-    log.addHandler(logging.StreamHandler(sys.stdout))
+def setup_logging(log_level: str, log_to_stdout: bool) -> None:
+    """Initialize logging"""
     log.setLevel(log_level)
-    log.debug('Setting log Level to %s', log_level)
+
+    if log_to_stdout:
+        log.addHandler(logging.StreamHandler(sys.stdout))
+    else:
+        log.addHandler(SysLogHandler(address='/run/systemd/journal/dev-log'))
+
+    log.debug("Setting log level to %s", log_level)
 
 def get_sd_socket() -> socket:
     """
@@ -212,6 +219,11 @@ def parse_arguments() -> Namespace:
                         type=str, choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
                         default="WARNING")
 
+    parser.add_argument("--log-to-stdout",
+                        help=("logs information to stdout instead of the journal. This should be "
+                             "used when testing tarpyt."),
+                        action='store_true', default=False)
+
     return parser.parse_args()
 
 async def main() -> None:
@@ -220,7 +232,7 @@ async def main() -> None:
     systemd-socket-activate.
     """
     args = parse_arguments()
-    setup_logging(args.log_level)
+    setup_logging(args.log_level, args.log_to_stdout)
 
     try:
         sock = get_sd_socket()
