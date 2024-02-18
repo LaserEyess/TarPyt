@@ -5,7 +5,7 @@ Requires=tarpyt-@PROTOCOL@@%i.socket
 [Service]
 Type=notify
 ExecStart=@bindir@/tarpyt --protocol @PROTOCOL@ --log-level INFO
-NoNewPrivileges=yes
+LogExtraFields=SYSLOG_IDENTIFIER="tarpyt-@PROTOCOL@-%i"
 
 # Low CPU priority/resources
 Nice=19
@@ -23,6 +23,7 @@ PrivateUsers=yes
 DynamicUser=yes
 
 # Sandboxing
+NoNewPrivileges=yes
 CapabilityBoundingSet=
 ProtectSystem=strict
 ProtectHome=yes
