@@ -28,7 +28,7 @@ goals will not be added.
     importantly binding to any port without running as root or using capabilities. TarPyt will
     merely accept a socket at instantiation, and use that socket for its entire lifetime. It does
     not handle anything beyond merely receiving this socket and being used as a tarpit.
- 2. This program is written for Python `>=3.11` using the standard library **only** at runtime. This
+ 2. This program is written for Python `>=3.11` and **only** uses the standard library. This
     allows for easy portability and installation on any system that runs systemd and Python, which
     should cover the vast majority of Linux installations. Older versions of Python will not work.
  3. Python is used for its easy of development and quick auditing, but typing will be
