@@ -39,9 +39,10 @@ The supported platforms are exclusively any not-so-old Linux distribution that u
 and Python `>=3.11`.
 
 ## Requirements
-There are a few build-time requirements:
+Building (configuring and installing) is done with `meson`. A version `>= 0.60.0` is required.
 
- - `meson`: building and installing
+For testing, a couple of other utils are needed:
+
  - `curl`: for `test/test_http.sh`
  - `openssh`: for `test/test_ssh.sh`
 
