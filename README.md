@@ -39,12 +39,12 @@ The supported platforms are exclusively any not-so-old Linux distribution that u
 and Python `>=3.11`.
 
 ## Requirements
-Building (configuring and installing) is done with `meson`. A version `>= 0.60.0` is required.
+Building (configuring and installing) is done with `meson`. A version `>= 1.1.0` is required.
 
 For testing, a couple of other utils are needed:
 
- - `curl`: for `test/test_http.sh`
- - `openssh`: for `test/test_ssh.sh`
+ - `curl`: for HTTP testing
+ - `openssh`: client only, for SSH testing
 
 For runtime:
 
@@ -59,6 +59,21 @@ Using meson:
 meson setup --prefix="$prefix" "$builddir"
 meson install -C "$buildtir"
 ```
+
+## Testing
+Tests can be enabled with:
+
+```sh
+meson setup -Denable_tests=true
+```
+
+Which is on by default. Afterwards tests can be run with:
+
+```sh
+meson test
+```
+
+The tests are not very sophisticated and just make sure each protocol is stalled after 10 seconds.
 
 ## Usage
 TarPyt is supposed to be exclusively used as a systemd socket-activated service. To run an ssh tarpit

@@ -1,7 +1,7 @@
 project('tarpyt',
   license: 'GPL3+',
   version: '0.0.1',
-  meson_version: '>=0.60.0')
+  meson_version: '>=1.1.0')
 
 find_program('python3', version: '>=3.11', required: true)
 dependency('libsystemd', version: '>=247', required: true)
@@ -24,3 +24,14 @@ foreach protocol: ['ssh', 'http', 'smtp']
 endforeach
 
 install_data('tarpyt', install_dir: get_option('bindir'), install_mode: 'rwxr-xr-x')
+
+# Testing
+if get_option('enable_tests')
+  tarpyt = meson.current_source_dir() / meson.project_name()
+  find_program('curl')
+  find_program('ssh')
+
+  test('ssh', files('test' / 'test_ssh.sh'), args: [tarpyt])
+  test('http', files('test' / 'test_http.sh'), args: [tarpyt])
+  test('smtp', files('test' / 'test_smtp.sh'), args: [tarpyt])
+endif
