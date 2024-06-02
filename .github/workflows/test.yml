@@ -1,0 +1,23 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install python3.11 python3.11-pip openssh-client curl libsystemd-dev
+          # meson is too old
+          pip3 install meson
+      - name: meson configure
+        run: meson setup build -Denable_tests=true
+      - name: meson test
+        run: meson test -C build

@@ -64,13 +64,13 @@ meson install -C "$buildtir"
 Tests can be enabled with:
 
 ```sh
-meson setup -Denable_tests=true
+meson setup "$builddir" -Denable_tests=true
 ```
 
 Which is on by default. Afterwards tests can be run with:
 
 ```sh
-meson test
+meson test -C "$builddir"
 ```
 
 The tests are not very sophisticated and just make sure each protocol is stalled after 10 seconds.
