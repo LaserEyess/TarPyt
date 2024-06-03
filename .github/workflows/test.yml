@@ -1,0 +1,21 @@
+name: test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson python3 libsystemd-dev curl openssh-client
+      - name: meson configure
+        run: meson setup build -Denable_tests=true
+      - name: meson test
+        run: meson test -C build || cat ./build/meson-logs/testlog.txt
