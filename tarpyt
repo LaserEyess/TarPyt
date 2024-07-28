@@ -25,6 +25,7 @@ from argparse import ArgumentParser, Namespace
 import asyncio
 import ctypes
 import enum
+import ipaddress as ip
 import logging
 from logging.handlers import SysLogHandler
 import random
@@ -88,7 +89,11 @@ class Handler():
         if host is None:
             raise ValueError("what the fuck?")
 
-        hostname = host[0]
+        hostname = ip.ip_address(host[0])
+
+        # check if we got an embedded ipv4
+        if (hostname.version) == 6 and (addr := hostname.ipv4_mapped):
+            hostname = addr
 
         try:
             self.counter += 1
