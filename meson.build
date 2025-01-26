@@ -1,6 +1,6 @@
 project('tarpyt',
   license: 'GPL3+',
-  version: '0.0.1',
+  version: '25.01.0',
   meson_version: '>=1.1.0')
 
 find_program('python3', version: '>=3.11', required: true)
