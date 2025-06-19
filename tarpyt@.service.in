@@ -16,6 +16,7 @@ CPUSchedulingPolicy=idle
 # Bound memory to prevent DDOS
 # (20 MiB should be enough for anyone)
 MemoryHigh=20M
+ManagedOOMSwap=kill
 ManagedOOMMemoryPressure=kill
 
 # Run as a random user in a user namespace
@@ -29,6 +30,7 @@ ProtectSystem=strict
 ProtectHome=yes
 PrivateDevices=yes
 ProtectProc=invisible
+ProcSubset=pid
 PrivateTmp=yes
 PrivateNetwork=yes
 PrivateIPC=yes
@@ -47,6 +49,7 @@ KeyringMode=private
 MemoryDenyWriteExecute=yes
 PrivateMounts=yes
 SystemCallFilter=@system-service
+SystemCallFilter=~@resources @privileged
 SystemCallArchitectures=native
 DevicePolicy=closed
 IPAddressDeny=any
