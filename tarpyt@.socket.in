@@ -5,5 +5,8 @@ After=network.target
 [Socket]
 ListenStream=%i
 
+# Turn on IP accounting
+IPAccounting=yes
+
 [Install]
 WantedBy=sockets.target
