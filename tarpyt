@@ -34,6 +34,8 @@ import string
 import sys
 import typing as T
 
+class ServerAbortedError(Exception):
+    """A class used to indicate that an abort has occured, vs another error"""
 
 # Logging setup
 log = logging.getLogger('TarPyt')
@@ -83,11 +85,19 @@ class Handler():
         writer : asyncio.StreamWriter
             StreamWriter from asyncio.start_server()
 
+        Raises
+        ------
+        ServerAbortedError:
+            In the case of an unknown situation being encountered, we will abort early to ensure
+            nothing bad is about to happen.
         """
         _ = reader # unused argument
         host = writer.get_extra_info("peername", default=None)
         if host is None:
-            raise ValueError("what the fuck?")
+            # We got a peer with no address
+            # Assume something nefarious is happening and abort
+            log.critical("ABORTING: Could not get hostname for a peer! Very Suspicious!")
+            raise ServerAbortedError("Empty peername, this is some sort of bug")
 
         hostname = ip.ip_address(host[0])
 
@@ -107,9 +117,23 @@ class Handler():
                 writer.write(self.get_msg())
                 await writer.drain()
 
-        except (ConnectionResetError, TimeoutError):
-            self.counter -= 1
+        except (ConnectionResetError, BrokenPipeError):
+            pass
+        except ConnectionAbortedError:
+            # Note: This is usually indicative of a local networking issue, so flag it separately
+            log.warning("Connection aborted for %s", hostname)
+        except OSError as e:
+            # Most of the above are flavors of OSError, but if one occurs where we don't expect it
+            # We want to flag it
+            log.warning("OS Error occured for %s: errno: %d, '%s'", hostname, e.errno, e.strerror)
+        except Exception as e:
+            # We have hit an unknown exception that shouldn't happen. Assume something nefarious
+            # and just abort
+            log.exception("ABORTING: Unknown Error has occured when writing to %s", hostname)
+            raise ServerAbortedError("Unknown exception while writing to socket") from e
+        finally:
             log.info("Connection closed with remote host %s (%d total)", hostname, self.counter)
+            self.counter -= 1
 
 class SSHHandler(Handler):
     """Handler class for ssh connections"""
@@ -283,9 +307,14 @@ async def main() -> None:
             await server.serve_forever()
         except (asyncio.exceptions.CancelledError, RuntimeError):
             pass
-
-        log.info("Server is shutting down")
-        sd_notify({"STOPPING": 1})
+        except ServerAbortedError:
+            log.exception("")
+            log.critical(("The above is a bug in TarPyt. "
+                "Please open an issue at https://github.com/LaserEyess/TarPyt/issues "
+                "and include any relevant logs or information that you have"))
+        finally:
+            log.info("Server is shutting down")
+            sd_notify({"STOPPING": 1})
 
 if __name__ == '__main__':
     asyncio.run(main())
